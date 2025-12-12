@@ -15,53 +15,44 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.log("Error:", err));
 
-const dataSchema = new mongoose.Schema({
+const productSchema = new mongoose.Schema({
   name: String,
   price: Number,
   description: String,
-  images: [String],
-  category: String,
-  size: [String],
-  color: [String],
   material: String,
-  brand: String,
   inStock: Number,
   discount: Number,
   gender: String,
   rating: Number,
-  reviews: [
+});
+
+const Product = mongoose.model("Product", productSchema);
+
+app.get("/products", async (req, res) => {
+  const products = await Product.find();
+  res.json(products);
+});
+
+app.post("/products", async (req, res) => {
+  const newProduct = new Product(req.body);
+  await newProduct.save();
+  res.json(newProduct);
+});
+
+app.delete("/products/:id", async (req, res) => {
+  await Product.findByIdAndDelete(req.params.id);
+  res.json({ message: "Product deleted" });
+});
+
+app.put("/products/:id", async (req, res) => {
+  const updatedProduct = await Product.findByIdAndUpdate(
+    req.params.id,
+    req.body,
     {
-      user: String,
-      comment: String,
-      stars: Number,
-    },
-  ],
-  productCode: String,
-});
-
-const Data = mongoose.model("Data", dataSchema);
-
-app.get("/data", async (req, res) => {
-  const data = await Data.find();
-  res.json(data);
-});
-
-app.post("/data", async (req, res) => {
-  const newData = new Data(req.body);
-  await newData.save();
-  res.json(newData);
-});
-
-app.delete("/data/:id", async (req, res) => {
-  await Data.findByIdAndDelete(req.params.id);
-  res.json({ message: "Data deleted" });
-});
-
-app.put("/data/:id", async (req, res) => {
-  const updatedData = await Data.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
-  res.json(updatedData);
+      new: true,
+    }
+  );
+  res.json(updatedProduct);
 });
 
 app.listen(PORT, () => {
