@@ -8,39 +8,41 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-mongoose.connect("mongodb+srv://ahmad:A2009developer@cluster0.puzjbog.mongodb.net/?appName=Cluster0")
+mongoose
+  .connect(
+    "mongodb+srv://ahmad:A2009developer@cluster0.puzjbog.mongodb.net/?appName=Cluster0"
+  )
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.log("Error:", err));
 
-const itemSchema = new mongoose.Schema({
+const dataSchema = new mongoose.Schema({
   name: String,
   age: Number,
 });
 
-const Item = mongoose.model("Item", itemSchema);
-
+const Data = mongoose.model("Data", dataSchema);
 
 app.get("/data", async (req, res) => {
-  const data = await Item.find();
+  const data = await Data.find();
   res.json(data);
 });
 
 app.post("/data", async (req, res) => {
-  const newItem = new Item(req.body);
-  await newItem.save();
-  res.json(newItem);
+  const newData = new Data(req.body);
+  await newData.save();
+  res.json(newData);
 });
 
 app.delete("/data/:id", async (req, res) => {
-  await Item.findByIdAndDelete(req.params.id);
-  res.json({ message: "Deleted" });
+  await Data.findByIdAndDelete(req.params.id);
+  res.json({ message: "Data deleted" });
 });
 
 app.put("/data/:id", async (req, res) => {
-  const updated = await Item.findByIdAndUpdate(req.params.id, req.body, {
+  const updatedData = await Data.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
   });
-  res.json(updated);
+  res.json(updatedData);
 });
 
 app.listen(PORT, () => {
