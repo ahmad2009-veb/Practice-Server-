@@ -17,7 +17,26 @@ mongoose
 
 const dataSchema = new mongoose.Schema({
   name: String,
-  age: Number,
+  price: Number,
+  description: String,
+  images: [String],
+  category: String,
+  size: [String],
+  color: [String],
+  material: String,
+  brand: String,
+  inStock: Number,
+  discount: Number,
+  gender: String,
+  rating: Number,
+  reviews: [
+    {
+      user: String,
+      comment: String,
+      stars: Number,
+    },
+  ],
+  productCode: String,
 });
 
 const Data = mongoose.model("Data", dataSchema);
