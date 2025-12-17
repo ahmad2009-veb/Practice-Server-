@@ -258,9 +258,9 @@ app.delete("/reviews/:id", async (req, res) => {
   res.json({ message: "Review deleted" });
 });
 
-app.post("/send-otp", async (req, res) => {
+app.post("/auth/otp", async (req, res) => {
   try {
-    const { phoneNumber } = req.body;
+    const { phoneNumber, otp } = req.body;
 
     if (!phoneNumber) {
       return res.status(400).json({ message: "Phone number required" });
@@ -271,44 +271,27 @@ app.post("/send-otp", async (req, res) => {
       return res.status(400).json({ message: "Invalid phone number format" });
     }
 
-    const otp = generateOTP();
+    if (!otp) {
+      const generatedOtp = generateOTP();
 
-    const user = await User.findOneAndUpdate(
-      { phoneNumber },
-      {
-        phoneNumber,
-        otp,
-        otpExpires: Date.now() + 5 * 60 * 1000,
-      },
-      { upsert: true, new: true }
-    );
+      await User.findOneAndUpdate(
+        { phoneNumber },
+        {
+          phoneNumber,
+          otp: generatedOtp,
+          otpExpires: Date.now() + 5 * 60 * 1000,
+        },
+        { upsert: true, new: true }
+      );
 
-    console.log("OTP:", otp);
+      console.log("OTP:", generatedOtp);
 
-    res.json({ message: "OTP sent" });
-  } catch (err) {
-    console.error("SEND OTP ERROR:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-});
-
-
-
-
-app.post("/verify-otp", async (req, res) => {
-  try {
-    const { phoneNumber, otp } = req.body;
-
-    if (!phoneNumber || !otp) {
-      return res.status(400).json({ message: "Phone number and OTP required" });
+      return res.json({ message: "OTP sent" });
     }
 
     const user = await User.findOne({ phoneNumber });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
 
-    if (!user.otp || !user.otpExpires) {
+    if (!user || !user.otp || !user.otpExpires) {
       return res.status(400).json({ message: "OTP not requested" });
     }
 
@@ -339,7 +322,7 @@ app.post("/verify-otp", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("VERIFY OTP ERROR:", err);
+    console.error("AUTH OTP ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
