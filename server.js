@@ -261,8 +261,15 @@ app.delete("/reviews/:id", async (req, res) => {
 app.post("/send-otp", async (req, res) => {
   try {
     const { phoneNumber } = req.body;
+
     if (!phoneNumber) {
       return res.status(400).json({ message: "Phone number required" });
+    }
+
+    // формат чек
+    const phoneRegex = /^\+?\d{9,15}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      return res.status(400).json({ message: "Invalid phone number format" });
     }
 
     let user = await User.findOne({ phoneNumber });
@@ -277,30 +284,40 @@ app.post("/send-otp", async (req, res) => {
     user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 дақиқа
     await user.save();
 
-    console.log("OTP:", otp); // 🔴 ҲОЗИР SMS НЕ, КОНСОЛ
+    console.log("OTP:", otp); // ⚠️ танҳо барои development
 
     res.json({ message: "OTP sent" });
   } catch (err) {
+    console.error("SEND OTP ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 
 app.post("/verify-otp", async (req, res) => {
   try {
     const { phoneNumber, otp } = req.body;
 
+    if (!phoneNumber || !otp) {
+      return res.status(400).json({ message: "Phone number and OTP required" });
+    }
+
     const user = await User.findOne({ phoneNumber });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+    if (!user.otp || !user.otpExpires) {
+      return res.status(400).json({ message: "OTP not requested" });
     }
 
     if (user.otpExpires < Date.now()) {
       return res.status(400).json({ message: "OTP expired" });
+    }
+
+    if (user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
     }
 
     user.otp = null;
@@ -322,9 +339,11 @@ app.post("/verify-otp", async (req, res) => {
       },
     });
   } catch (err) {
+    console.error("VERIFY OTP ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 
 app.listen(PORT, () => {
