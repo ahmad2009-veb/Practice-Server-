@@ -319,7 +319,19 @@ app.post("/signup", async (req, res) => {
 
     await user.save();
 
-    res.json({ message: "Signup successful" });
+    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.status(201).json({
+      message: "Signup successful",
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        email: user.email,
+      },
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
