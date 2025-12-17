@@ -2,15 +2,17 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
 const app = express();
 const PORT = process.env.PORT || 3000;
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 app.use(cors({ origin: "*" }));
 app.use(express.json());
-
+console.log("JWT_SECRET:", JWT_SECRET);
 mongoose
   .connect(
     "mongodb+srv://ahmad:A2009developer@cluster0.puzjbog.mongodb.net/?appName=Cluster0"
@@ -112,30 +114,19 @@ const productSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
   {
-    firstName: { type: String, required: true },
-
     phoneNumber: {
       type: String,
       required: true,
+      unique: true,
       match: [/^\+?\d{9,15}$/, "Invalid phone number"],
     },
 
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, "Invalid email"],
-    },
-
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-    },
+    otp: String,
+    otpExpires: Date,
   },
   { timestamps: true }
 );
+
 
 const Product = mongoose.model("Product", productSchema);
 const Category = mongoose.model("Category", categorySchema);
@@ -267,75 +258,74 @@ app.delete("/reviews/:id", async (req, res) => {
   res.json({ message: "Review deleted" });
 });
 
-app.post("/login", async (req, res) => {
+app.post("/send-otp", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { phoneNumber } = req.body;
+    if (!phoneNumber) {
+      return res.status(400).json({ message: "Phone number required" });
+    }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ phoneNumber });
+
+    if (!user) {
+      user = new User({ phoneNumber });
+    }
+
+    const otp = generateOTP();
+
+    user.otp = otp;
+    user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 дақиқа
+    await user.save();
+
+    console.log("OTP:", otp); // 🔴 ҲОЗИР SMS НЕ, КОНСОЛ
+
+    res.json({ message: "OTP sent" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+app.post("/verify-otp", async (req, res) => {
+  try {
+    const { phoneNumber, otp } = req.body;
+
+    const user = await User.findOne({ phoneNumber });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Wrong password" });
+    if (user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
-      expiresIn: "7d",
-    });
-
-    res.json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        email: user.email,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-app.post("/signup", async (req, res) => {
-  try {
-    const { firstName, email, password, phoneNumber } = req.body;
-
-    const existUser = await User.findOne({ email });
-    if (existUser) {
-      return res.status(400).json({ message: "User already exists" });
+    if (user.otpExpires < Date.now()) {
+      return res.status(400).json({ message: "OTP expired" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({
-      firstName,
-      email,
-      phoneNumber,
-      password: hashedPassword,
-    });
-
+    user.otp = null;
+    user.otpExpires = null;
     await user.save();
 
-    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { id: user._id, phoneNumber: user.phoneNumber },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    res.status(201).json({
-      message: "Signup successful",
+    res.json({
+      message: "Verified",
       token,
       user: {
         id: user._id,
-        firstName: user.firstName,
-        email: user.email,
+        phoneNumber: user.phoneNumber,
       },
     });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
