@@ -266,32 +266,32 @@ app.post("/send-otp", async (req, res) => {
       return res.status(400).json({ message: "Phone number required" });
     }
 
-    // формат чек
     const phoneRegex = /^\+?\d{9,15}$/;
     if (!phoneRegex.test(phoneNumber)) {
       return res.status(400).json({ message: "Invalid phone number format" });
     }
 
-    let user = await User.findOne({ phoneNumber });
-
-    if (!user) {
-      user = new User({ phoneNumber });
-    }
-
     const otp = generateOTP();
 
-    user.otp = otp;
-    user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 дақиқа
-    await user.save();
+    const user = await User.findOneAndUpdate(
+      { phoneNumber },
+      {
+        phoneNumber,
+        otp,
+        otpExpires: Date.now() + 5 * 60 * 1000,
+      },
+      { upsert: true, new: true }
+    );
 
-    console.log("OTP:", otp); // ⚠️ танҳо барои development
+    console.log("OTP:", otp);
 
     res.json({ message: "OTP sent" });
   } catch (err) {
-    console.error("SEND OTP ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("SEND OTP ERROR:", err.message);
+    res.status(500).json({ message: err.message });
   }
 });
+
 
 
 
