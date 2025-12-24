@@ -110,6 +110,7 @@ const productSchema = new mongoose.Schema({
   brand: brandSchema,
   size: [sizeSchema],
   review: [reviewSchema],
+  
 });
 
 const userSchema = new mongoose.Schema(
