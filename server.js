@@ -86,14 +86,22 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  description: String,
-  material: String,
+  description: {
+    type: String,
+    required: true,
+  },
+  material: {
+    type: String,
+    required: true,
+  },
   inStock: {
     type: Number,
+    required: true,
     default: 0,
   },
   discount: {
     type: Number,
+    required: true,
     default: 0,
   },
   gender: {
@@ -104,13 +112,13 @@ const productSchema = new mongoose.Schema({
   rating: {
     type: Number,
     default: 0,
+    required:true
   },
   images: [imagesSchema],
   category: categorySchema,
   brand: brandSchema,
   size: [sizeSchema],
   review: [reviewSchema],
-  
 });
 
 const userSchema = new mongoose.Schema(
